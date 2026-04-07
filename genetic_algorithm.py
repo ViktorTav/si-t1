@@ -104,6 +104,8 @@ available_itens: list[tuple[int, int]] = get_itens(ITENS_CSV)
 
 fitness_history = genetic_algorithm(available_itens, CAPACITY, GENERATIONS, POPULATION_SIZE, CROSSOVER_RATE, MUTATION_RATE, ELITE_SIZE, TOURNAMENT_SIZE)
 
+print(fitness_history[-1])
+
 plt.figure(figsize=(10, 6))
 plt.plot(fitness_history, label="Melhor Aptidão (Fitness)", color="blue", linewidth=2)
 

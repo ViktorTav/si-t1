@@ -32,7 +32,6 @@ def calculate_total_weight(itens: list[tuple[int, int]], selected_itens: list[in
 def calculate_total_value(itens: list[tuple[int, int]], selected_itens: list[int]) -> int:
     return sum(item[0] for item, selected in zip(itens, selected_itens) if selected)
 
-# Talvez implementar uma função para calcular o fitness através do valor - penalidade por excesso de peso?
 def calculate_chromosome_fitness(chromosome: list[int], itens: list[tuple[int, int]], max_capacity: int) -> int:
     weight: int = calculate_total_weight(itens, chromosome)
     value: int = calculate_total_value(itens, chromosome)

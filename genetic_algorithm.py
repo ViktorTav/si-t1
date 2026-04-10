@@ -1,19 +1,24 @@
 from random import randint, random, sample
-from matplotlib import pyplot as plt
+from time import time
+import numpy as np
 import csv
 
 CAPACITY = 50
-GENERATIONS = 50
-POPULATION_SIZE = 50
 CROSSOVER_RATE = 0.6
 MUTATION_RATE = 0.01
 ELITE_SIZE = 2
 TOURNAMENT_SIZE = 3
 
 SELECTED_ITEM_PROBABILITY = 0.05
-WEIGHT_EXCEED_PENALITY = 20
 
 ITENS_CSV = "itens.csv"
+RESULTS_CSV = "results_genetic_algorithm.csv"
+
+EXECUTIONS = 30
+
+GENERATIONS = [25, 50, 100]
+POPULATION_SIZES = [50, 100]
+
 
 def get_itens(filename: str) -> list[tuple[int, int]]:
     with open(filename, mode="r", encoding="utf-8", newline="") as file:
@@ -29,6 +34,9 @@ def generate_initial_population(population_size: int, chromosome_size: int) -> l
 def calculate_total_weight(itens: list[tuple[int, int]], selected_itens: list[int]) -> int:
     return sum(item[1] for item, selected in zip(itens, selected_itens) if selected)
 
+def calculate_total_selected_itens(itens: list[tuple[int, int]], selected_itens: list[int]) -> int:
+    return sum(1 for _, selected in zip(itens, selected_itens) if selected)
+
 def calculate_total_value(itens: list[tuple[int, int]], selected_itens: list[int]) -> int:
     return sum(item[0] for item, selected in zip(itens, selected_itens) if selected)
 
@@ -37,7 +45,7 @@ def calculate_chromosome_fitness(chromosome: list[int], itens: list[tuple[int, i
     value: int = calculate_total_value(itens, chromosome)
 
     if weight > max_capacity:
-        return max(0, value - (weight - max_capacity) * WEIGHT_EXCEED_PENALITY)
+        return 0
     
     return value
 
@@ -69,7 +77,7 @@ def get_elite_chromosomes(n:int, population: list[list[int]], itens: list[int], 
 def genetic_algorithm(itens: list[tuple[int, int]], capacity:int, generations: int, population_size: int, crossover_rate: float, mutation_rate: float, elite_size: int, tournament_size: int):
     population: list[list[int]] = generate_initial_population(population_size, len(itens))
 
-    fitness_history: list[int] = []
+    best_chromosome_history: list[list[int]] = []
 
     for _ in range(generations):
         next_population: list[list[int]] = []
@@ -77,7 +85,7 @@ def genetic_algorithm(itens: list[tuple[int, int]], capacity:int, generations: i
 
         next_population.extend(elite_chromosomes)
 
-        fitness_history.append(calculate_chromosome_fitness(elite_chromosomes[0], itens, capacity))
+        best_chromosome_history.append(elite_chromosomes[0])
 
         while len(next_population) < population_size :
             parent_1 = chromosome_selection(tournament_size, population, itens, capacity)
@@ -98,21 +106,58 @@ def genetic_algorithm(itens: list[tuple[int, int]], capacity:int, generations: i
 
         population = next_population
         
-    return fitness_history
+    return best_chromosome_history
 
 available_itens: list[tuple[int, int]] = get_itens(ITENS_CSV)
 
-fitness_history = genetic_algorithm(available_itens, CAPACITY, GENERATIONS, POPULATION_SIZE, CROSSOVER_RATE, MUTATION_RATE, ELITE_SIZE, TOURNAMENT_SIZE)
+def knapsack_proplem_simulation(generations: int, population_size: int, executions: int) -> None:
+    fitness_history = []
+    best_weight = 0
+    best_selected_items_total = 0
+    time_execution_history = []
 
-print(fitness_history[-1])
+    for i in range(executions):
+        initial_time = time()
+        best_chromosome_history = genetic_algorithm(available_itens, CAPACITY, generations, population_size, CROSSOVER_RATE, MUTATION_RATE, ELITE_SIZE, TOURNAMENT_SIZE)
+        
+        fitness = calculate_chromosome_fitness(best_chromosome_history[-1], available_itens, CAPACITY)
+        weight = calculate_total_weight(available_itens, best_chromosome_history[-1])
+        selected_items_total = calculate_total_selected_itens(available_itens, best_chromosome_history[-1])
 
-plt.figure(figsize=(10, 6))
-plt.plot(fitness_history, label="Melhor Aptidão (Fitness)", color="blue", linewidth=2)
+        time_execution_history.append(time() - initial_time)
+        fitness_history.append(fitness)
 
-plt.title("Evolução das gerações")
-plt.xlabel("Geração")
-plt.ylabel("Valor Total (Fitness)")
-plt.grid(True, linestyle='--', alpha=0.6)
-plt.legend()
+        if weight > best_weight and selected_items_total > best_selected_items_total:
+            best_weight = weight
+            best_selected_items_total = selected_items_total
 
-plt.show()
+        print(f"Generations/Population Size: {generations}/{population_size}")
+        print(f"Execution {i}: {time_execution_history[-1]}")
+        print(f"Best Fitness: {fitness}\n")
+        print(f"Weight/Selected Items: {weight}/{selected_items_total}")
+
+
+    return {
+        "generations": generations,
+        "population_size": population_size,
+        "mean_fitness": np.mean(fitness_history),
+        "best_fitness": np.max(fitness_history),
+        "best_weight_item_proportion": f"{best_weight}/{best_selected_items_total}",
+        "standard_deviation": np.std(fitness_history),
+        "mean_time": np.mean(time_execution_history)
+    }
+
+all_results = []
+
+for population_size in POPULATION_SIZES:
+    for generation in GENERATIONS:
+        result_stats = knapsack_proplem_simulation(generation, population_size, EXECUTIONS)
+        all_results.append(result_stats)
+
+with open(RESULTS_CSV, mode="w", encoding="utf-8", newline="") as file:
+    fieldnames = ["generations", "population_size", "mean_fitness", "best_fitness", "best_weight_item_proportion", "standard_deviation", "mean_time"]
+    writer = csv.DictWriter(file, fieldnames)
+
+    writer.writeheader()
+    for row in all_results:
+        writer.writerow(row)

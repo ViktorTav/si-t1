@@ -5,7 +5,7 @@ from time import time
 import numpy as np
 
 ITENS_CSV = "itens.csv"
-RESULTS_CSV = "results.csv"
+RESULTS_CSV = "results_simulated_annealing.csv"
 
 INITIAL_TEMPERATURE = 10000
 FINAL_TEMPERATURE = 1
@@ -13,7 +13,7 @@ CAPACITY = 50
 
 EXECUTIONS = 50
 
-ALPHAS = [0.85, 0.90, 0.95, 0.99]
+ALPHAS = [0.85, 0.9, 0.95, 0.99]
 
 def calculate_total_weight(itens: list[tuple[int, int]], selected_itens: list[int]):
     return sum(item[1] for item, selected in zip(itens, selected_itens) if selected)
